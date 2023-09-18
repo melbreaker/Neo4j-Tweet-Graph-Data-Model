@@ -9,6 +9,7 @@ Macquarie University
 ## Data Structure
 
 Mapping Graph Data's Node to JSON attributes
+- Tweet - JSON document
 - Link - twitter_entities.urls[]
 - Source - generator
 - Hashtags - twitter_entities.hashtags[]
