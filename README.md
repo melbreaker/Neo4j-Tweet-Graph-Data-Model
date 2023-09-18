@@ -306,7 +306,7 @@ YIELD * ;
 
 ## Problem 1
 
-Find the top five most used sources (app or site) to post or share a tweet. For each source return the number of posts and the number of users that created tweets from that source.
+*Find the top five most used sources (app or site) to post or share a tweet. For each source return the number of posts and the number of users that created tweets from that source.*
 
 ```
 MATCH (s:Source)<-[r:USING]-(t:Tweet)<-[p:POSTS]-(u:User) 
@@ -317,7 +317,7 @@ ORDER BY num_posts DESC LIMIT 5;
 
 ## Problem 2
 
-Find top 3 users that have the highest number of tweets with a retweetCount greater than 50. For each of these users show the number of popular tweets they have and the top 2 hashtags present in all their tweets in order of occurrence.
+*Find top 3 users that have the highest number of tweets with a retweetCount greater than 50. For each of these users show the number of popular tweets they have and the top 2 hashtags present in all their tweets in order of occurrence.*
 
 ```
 MATCH (u:User)-[p:POSTS]->(t:Tweet)-[r:TAGS]->(h:Hashtag) 
@@ -330,7 +330,7 @@ ORDER BY num_pop_posts DESC LIMIT 3;
 
 ## Problem 3
 
-Find the shortest path connecting the User ‘luckyinsivan’ and the hashtag ‘imsosick’ using any relationship type except :USING. Submit a picture of the path from neo4j browser graph view and the length of this path.
+*Find the shortest path connecting the User ‘luckyinsivan’ and the hashtag ‘imsosick’ using any relationship type except :USING. Submit a picture of the path from neo4j browser graph view and the length of this path.*
 
 ```
 MATCH p=shortestPath((u:User{username: "luckyinsivan"})-[r:CONTAINS|MENTIONS|POSTS|RETWEETS|TAGS*]-(h:Hashtag{text: "imsosick"})) 
