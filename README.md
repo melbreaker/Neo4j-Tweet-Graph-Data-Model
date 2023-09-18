@@ -22,7 +22,7 @@ CALL apoc.periodic.iterate(
  value.favoritesCount AS favoritesCount,
  value.verb AS verb
  MERGE (t:Tweet{id:id})
- ON CREATE SET
+ ON CREATE SET\
  t.postedTimestamp = postedTimestamp,
  t.text = text,
  t.language = language,
@@ -274,23 +274,27 @@ RETURN length(p) as path_length LIMIT 1;
 
 ## Problem A
 
-- Each Link node represented a unique link either from the same or different domain
-- To answer this question, one would need to write a cypher comparing every link nodes that contain "realestate.com.au" string in the expanded_url property.
-- Instead of comparing string in a url, we could just create a domain name node with an expanded url as a properties of CONTAINS relationship between Tweet and Domain node.
-- With this approach, it is faster to search for a node with the given domain than comparing part of url string in the property.
+*Suggest a modification to the base data model shown in Figure 3, that would make it easier to answer questions such as “Show me the top 5 users posting links from realestate.com.au”. Discuss any other options you considered.*
 
-Original Cypher
+To improve the data model for answering such question, the following modifications are considered:
+
+1. Introduce Domain Nodes: Create a separate Domain node for each unique domain (e.g., realestate.com.au) that appears in the expanded URLs. Each Domain node should have a property to store the domain name.
+
+2. Relationship Between Tweet and Domain: Establish a relationship "CONTAINS" between Tweet nodes and Domain nodes to indicate that a Tweet contains a link from a specific domain. The relationship should have a property to store the expanded URLs.
+
+By implementing this modification, it is more efficient to answer questions related to specific domains because it allows direct traversal of relationship between Tweet nodes and Domain nodes without having to compare part of URL string in the expanded_url property.
+
+Originally, to find the top 5 users posting links from realestate.com.au, the cypher will be like this
 ```
 MATCH (u:User)-[p:POSTS]->(t:Tweet)-[c:CONTAINS]->(l:Link) 
-WHERE l.expanded_url 
-CONTAINS "realestate.com.au" 
-RETURN *;
+WHERE l.expanded_url CONTAINS "realestate.com.au" 
+RETURN u.username as username, count(distinct t) as number_of_posts  ;
 ```
 
-Updated Cypher
+An updated cypher with a direct traversal of relationship between User, Tweet and Domain nodes
 ```
 MATCH (u:User)-[p:POSTS]->(t:Tweet)-[c:CONTAINS]->(d:Domain {text: "realestate.com.au"}) 
-RETURN *;
+RETURN u.username as username, count(distinct t) as number_of_posts  ;
 ```
 
 ## Problem B
