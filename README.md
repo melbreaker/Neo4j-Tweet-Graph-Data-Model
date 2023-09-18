@@ -270,7 +270,7 @@ MATCH p=allShortestPaths((u:User{username: "luckyinsivan"})-[r:CONTAINS|MENTIONS
 RETURN length(p) as path_length LIMIT 1;
 ```
 
-# PART 3
+# PART 3: Refactoring the Model
 
 ## Problem A
 
@@ -281,6 +281,8 @@ To improve the data model for answering such question, the following modificatio
 1. Introduce Domain Nodes: Create a separate Domain node for each unique domain (e.g., realestate.com.au) that appears in the expanded URLs. Each Domain node should have a property to store the domain name.
 
 2. Relationship Between Tweet and Domain: Establish a relationship "CONTAINS" between Tweet nodes and Domain nodes to indicate that a Tweet contains a link from a specific domain. The relationship should have a property to store the expanded URLs.
+
+3. Eliminate the current Link node: As the relationship between Domain and Tweet already holds the information regarding expanded URLs, deleting the existing Link node and its associated relationships will eliminate data redundancy.
 
 By implementing this modification, it is more efficient to answer questions related to specific domains because it allows direct traversal of relationship between Tweet nodes and Domain nodes without having to compare part of URL string in the expanded_url property.
 
@@ -293,24 +295,28 @@ RETURN u.username as username, count(distinct t) as number_of_posts  ;
 
 An updated cypher with a direct traversal of relationship between User, Tweet and Domain nodes
 ```
-MATCH (u:User)-[p:POSTS]->(t:Tweet)-[c:CONTAINS]->(d:Domain {text: "realestate.com.au"}) 
+MATCH (u:User)-[p:POSTS]->(t:Tweet)-[c:CONTAINS]->(d:Domain {name: "realestate.com.au"}) 
 RETURN u.username as username, count(distinct t) as number_of_posts  ;
 ```
 
 ## Problem B
 
-Create Domain node
+*Write the Cypher statements to implement your changes to the model. This should process existing data in the model to create new nodes and relationships from the data you already have.*
+
+### Create Domain nodes and relationships to Tweet nodes. 
+
+The script use apoc.data.url() to extract domain name from the URLs.
 ```
 MATCH (tweet:Tweet)-[:CONTAINS]->(link:Link) 
-WITH *, apoc.data.url(link.expanded_url) as url
-MERGE (domain:Domain {text: url.host})
+WITH *, apoc.data.url(link.expanded_url) as url 
+MERGE (domain:Domain {name: url.host})
 MERGE (tweet)-[c:CONTAINS]->(domain)
 ON CREATE SET 
 c.expanded_url = link.expanded_url,
 c.display_url = link.display_url,
 c.url = link.url;
 ```
-Delete existing Link node
+### Delete existing Link nodes and it's relationships
 ```
 MATCH (link:Link) DETACH DELETE link;
 ```
