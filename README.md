@@ -302,31 +302,41 @@ CALL apoc.periodic.iterate(
 YIELD * ;
 ```
 
-# PART 2
+# PART 2. Initial Queries
 
 ## Problem 1
+
+Find the top five most used sources (app or site) to post or share a tweet. For each source return the number of posts and the number of users that created tweets from that source.
 
 ```
 MATCH (s:Source)<-[r:USING]-(t:Tweet)<-[p:POSTS]-(u:User) 
 RETURN s.displayName AS source, count(t) AS num_posts, count(DISTINCT u) AS num_users 
 ORDER BY num_posts DESC LIMIT 5;
 ```
+![part-2-problem-1](images/part-2-problem-1.png)
 
 ## Problem 2
 
+Find top 3 users that have the highest number of tweets with a retweetCount greater than 50. For each of these users show the number of popular tweets they have and the top 2 hashtags present in all their tweets in order of occurrence.
+
 ```
 MATCH (u:User)-[p:POSTS]->(t:Tweet)-[r:TAGS]->(h:Hashtag) 
-WHERE t.retweetCount > 50 
-RETURN u.username AS user_name, COUNT(t) AS num_pop_posts, collect(DISTINCT h.text) AS top_hashtags 
+WHERE t.retweetCount > 50
+WITH u.username AS user_name, COUNT(DISTINCT t) AS num_pop_posts, COLLECT(DISTINCT h.text) AS hashtags
+RETURN user_name, num_pop_posts, REDUCE(s = [], h IN hashtags | CASE WHEN SIZE(s) < 2 THEN s + h ELSE s END) AS top_hashtags 
 ORDER BY num_pop_posts DESC LIMIT 3;
 ```
+![part-2-problem-2](images/part-2-problem-2.png)
 
 ## Problem 3
 
+Find the shortest path connecting the User ‘luckyinsivan’ and the hashtag ‘imsosick’ using any relationship type except :USING. Submit a picture of the path from neo4j browser graph view and the length of this path.
+
 ```
-MATCH p=allShortestPaths((u:User{username: "luckyinsivan"})-[r:CONTAINS|MENTIONS|POSTS|RETWEETS|TAGS*]-(h:Hashtag{text: "imsosick"})) 
-RETURN length(p) as path_length LIMIT 1;
+MATCH p=shortestPath((u:User{username: "luckyinsivan"})-[r:CONTAINS|MENTIONS|POSTS|RETWEETS|TAGS*]-(h:Hashtag{text: "imsosick"})) 
+RETURN length(p) as path_length;
 ```
+![part-2-problem-3](images/part-2-problem-3.png)
 
 # PART 3: Refactoring the Model
 
