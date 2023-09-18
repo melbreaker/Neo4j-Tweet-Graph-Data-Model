@@ -19,7 +19,7 @@ Mapping Graph Data's Node to JSON attributes
 
 ```
 CALL apoc.periodic.iterate(
-'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/10000_tweet/main/tweets.json") YIELD value',
+'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/Neo4j-Tweet-Graph-Data-Model/main/cleaned_tweets.json") YIELD value',
 'WITH
  value.id AS id,
  datetime({ epochMillis: apoc.date.parse(value.postedTime, "ms",
@@ -46,15 +46,16 @@ YIELD * ;
 
 ```
 CALL apoc.periodic.iterate(
-'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/10000_tweet/main/tweets.json") YIELD value',
+'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/Neo4j-Tweet-Graph-Data-Model/main/cleaned_tweets.json") YIELD value',
 'WITH
  value.id AS id,
  value.twitter_entities.urls AS urls
+ WHERE size(urls) > 0 //filter for a tweet with urls
  MATCH(t:Tweet{id:id})
  UNWIND urls AS tw_url
- MERGE (l:Link{url: tw_url.url})
+ MERGE (l:Link{expanded_url: tw_url.expanded_url})
  ON CREATE SET
- l.expanded_url = tw_url.expanded_url,
+ l.url = tw_url.url,
  l.display_url = tw_url.display_url
  MERGE (t)-[:CONTAINS]->(l)',
 {batchSize:500})
@@ -82,10 +83,11 @@ YIELD * ;
 
 ```
 CALL apoc.periodic.iterate(
-'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/10000_tweet/main/tweets.json") YIELD value',
+'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/Neo4j-Tweet-Graph-Data-Model/main/cleaned_tweets.json") YIELD value',
 'WITH
  value.id AS id,
  value.twitter_entities.hashtags AS hashtags
+ WHERE size(hashtags) > 0 // filter for a tweet with hashtags
  MATCH(t:Tweet{id:id})
  UNWIND hashtags AS hashtag
  MERGE (h:Hashtag{text: hashtag.text})
@@ -94,11 +96,45 @@ CALL apoc.periodic.iterate(
 YIELD * ;
 ```
 
-## Import Users (POSTS)
+## Import Users 
+
+**We cannot use User ID as a reliable identifier for users because, in user_mentions, the ID of the same user is abbreviated. Creating a unique user based on this abbreviated ID would lead to duplicate users with the same username. To import users, it's more preferable to use their usernames as identifiers since usernames are inherently unique.**
+
+For example, a user with username "Dubagee" posted and is mentioned in several tweets. The difference is in User's ID as shown in the following: 
+
+JSON documents for User who posted the tweet.
+```
+"object" : {
+        "id" : "149715691054696161280",
+        "actor" : {
+            "objectType" : "person",
+            "id" : "10243240798647", // User's ID
+            "link" : "http://www.twitter.com/Dubagee",
+            "displayName" : "Geneviève (GiGi)",
+            ...
+            "preferredUsername" : "Dubagee",
+```
+
+JSON documents for User who is mentioned.
+```
+"user_mentions" : [ 
+            {
+                "screen_name" : "Dubagee",
+                "name" : "Geneviève (GiGi)",
+                "id" : 240798647, // User's ID
+                "id_str" : "240798647",
+                "indices" : [ 
+                    3, 
+                    11
+                ]
+            }
+```
+
+## Import Users with a POSTS relationship
 
 ```
 CALL apoc.periodic.iterate(
-'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/10000_tweet/main/tweets.json") YIELD value',
+'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/Neo4j-Tweet-Graph-Data-Model/main/cleaned_tweets.json") YIELD value',
 'WITH
  value.id AS id,
  value.actor.id AS userId,
@@ -114,14 +150,15 @@ CALL apoc.periodic.iterate(
 YIELD * ;
 ```
 
-## Import Users (Mentions)
+## Import Users with a MENTIONS relationship
 
 ```
 CALL apoc.periodic.iterate(
-'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/10000_tweet/main/tweets.json") YIELD value',
+'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/Neo4j-Tweet-Graph-Data-Model/main/cleaned_tweets.json") YIELD value',
 'WITH
  value.id AS id,
  value.twitter_entities.user_mentions AS userMentions
+ WHERE size(userMentions) > 0 // filter for a tweet with mentioned users
  MATCH (t:Tweet{id:id})
  UNWIND userMentions AS userMention
  MERGE (u:User{username: userMention.screen_name})
@@ -133,11 +170,11 @@ CALL apoc.periodic.iterate(
 YIELD * ;
 ```
 
-## Import Retweet
+## Import Original Tweet (A Tweet that is retweeted)
 
 ```
 CALL apoc.periodic.iterate(
-'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/10000_tweet/main/tweets.json") YIELD value',
+'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/Neo4j-Tweet-Graph-Data-Model/main/cleaned_tweets.json") YIELD value',
 'WITH
  value.id AS id,
  value.verb AS verb,
@@ -147,6 +184,7 @@ CALL apoc.periodic.iterate(
  value.object.text AS text,
  value.object.twitter_lang AS language,
  value.object.favoritesCount AS favoritesCount
+ WHERE verb = "share" // filter for retweet
  MATCH(t1:Tweet{id: id, type: "share"}) 
  MERGE(t2:Tweet{id:originalTweetId}) 
  ON CREATE SET
@@ -161,34 +199,40 @@ CALL apoc.periodic.iterate(
 YIELD *;
 ```
 
-## Import Links (Retweet)
+## Import Original Tweet's Links
 
 ```
 CALL apoc.periodic.iterate(
-'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/10000_tweet/main/tweets.json") YIELD value',
+'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/Neo4j-Tweet-Graph-Data-Model/main/cleaned_tweets.json") YIELD value',
 'WITH
+ value.id AS id,
+ value.object.twitter_entities.urls AS urls, 
  value.object.id AS originalTweetId,
- value.object.twitter_entities.urls AS urls
- MATCH(t:Tweet{id: originalTweetId})
+ value.verb AS verb
+ WHERE verb = "share" AND size(urls) > 0 // filter for a retweet with urls in the original tweet
+ MATCH(t1:Tweet{id: id, type: "share"})
+ MATCH(t2:Tweet{id: originalTweetId})
  UNWIND urls AS tw_url
  MERGE (l:Link{url: tw_url.url})
  ON CREATE SET
  l.expanded_url = tw_url.expanded_url,
  l.display_url = tw_url.display_url
- MERGE (t)-[:CONTAINS]->(l)',
+ MERGE (t2)-[:CONTAINS]->(l)',
 {batchSize:500})
 YIELD * ;
 ```
 
-## Import Sources (Retweet)
+## Import Original Tweet's Sources
 
 ```
 CALL apoc.periodic.iterate(
-'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/10000_tweet/main/tweets.json") YIELD value',
+'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/Neo4j-Tweet-Graph-Data-Model/main/cleaned_tweets.json") YIELD value',
 'WITH
  value.object.id AS originalTweetId,
  value.object.generator.displayName AS displayName,
- value.object.generator.link as link
+ value.object.generator.link as link,
+ value.verb AS verb
+ WHERE verb = "share" // filter for retweet
  MATCH (t:Tweet{id: originalTweetId})
  MERGE (s:Source{displayName: displayName, link: link})
  MERGE (t)-[:USING]->(s)
@@ -197,14 +241,16 @@ CALL apoc.periodic.iterate(
 YIELD * ;
 ```
 
-## Import Hashtags (Retweet)
+## Import Original Tweet's Hashtags
 
 ```
 CALL apoc.periodic.iterate(
-'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/10000_tweet/main/tweets.json") YIELD value',
+'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/Neo4j-Tweet-Graph-Data-Model/main/cleaned_tweets.json") YIELD value',
 'WITH
  value.object.id AS originalTweetId,
- value.object.twitter_entities.hashtags AS hashtags
+ value.object.twitter_entities.hashtags AS hashtags,
+ value.verb AS verb
+ WHERE verb = "share" AND size(hashtags) > 0 // filter for a retweet with hashtags in the original tweet
  MATCH(t:Tweet{id:originalTweetId})
  UNWIND hashtags AS hashtag
  MERGE (h:Hashtag{text: hashtag.text})
@@ -213,16 +259,18 @@ CALL apoc.periodic.iterate(
 YIELD * ;
 ```
 
-## Import Users - POSTS (Retweet)
+## Import Original Tweet's Users with a POST relationship
 
 ```
 CALL apoc.periodic.iterate(
-'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/10000_tweet/main/tweets.json") YIELD value',
+'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/Neo4j-Tweet-Graph-Data-Model/main/cleaned_tweets.json") YIELD value',
 'WITH
  value.object.id AS originalTweetId,
  value.object.actor.id AS userId,
  value.object.actor.displayName AS displayName,
- value.object.actor.preferredUsername AS username
+ value.object.actor.preferredUsername AS username,
+ value.verb AS verb
+ WHERE verb = "share" // filter for retweet
  MATCH (t:Tweet{id:originalTweetId})
  MERGE (u:User{username: username})
  ON CREATE SET
@@ -233,14 +281,16 @@ CALL apoc.periodic.iterate(
 YIELD * ;
 ```
 
-## Import Users - MENTIONS (Retweet)
+## Import Original Tweet's Users with a MENTIONED relationship
 
 ```
 CALL apoc.periodic.iterate(
-'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/10000_tweet/main/tweets.json") YIELD value',
+'CALL apoc.load.json("https://raw.githubusercontent.com/melbreaker/Neo4j-Tweet-Graph-Data-Model/main/cleaned_tweets.json") YIELD value',
 'WITH
  value.object.id AS originalTweetId,
- value.object.twitter_entities.user_mentions AS userMentions
+ value.object.twitter_entities.user_mentions AS userMentions,
+ value.verb AS verb
+ WHERE verb = "share" AND size(userMentions) > 0 // filter for a retweet with mentioned users in the original tweet
  MATCH (t:Tweet{id:originalTweetId})
  UNWIND userMentions AS userMention
  MERGE (u:User{username: userMention.screen_name})
