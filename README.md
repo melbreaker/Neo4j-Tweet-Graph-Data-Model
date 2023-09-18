@@ -1,11 +1,19 @@
-## Data Structure
-- Link - twitter_entities.urls
-- Source - generator
-- Hashtags - twitter_entities.hashtags
-- User (POSTS) - actor
-- User (Mentions) - twitter_entities.user_mentions
+Nottachat Kaewgard
 
-# PART 1
+Student ID: 47369833
+
+Macquarie University
+
+# PART 1. Initial Graph Data Model
+
+## Data Structure
+
+Mapping Graph Data's Node to JSON attributes
+- Link - twitter_entities.urls[]
+- Source - generator
+- Hashtags - twitter_entities.hashtags[]
+- User (POSTS) - actor
+- User (Mentions) - twitter_entities.user_mentions[]
 
 ## Import Tweets
 
@@ -286,17 +294,37 @@ To improve the data model for answering such question, the following modificatio
 
 By implementing this modification, it is more efficient to answer questions related to specific domains because it allows direct traversal of relationship between Tweet nodes and Domain nodes without having to compare part of URL string in the expanded_url property.
 
+![data-model-problem-d](images/part-3-problem-a.png)
+
+### Domain Node
+
+| Property | Value               |
+|----------|---------------------|
+| name     | "realestate.com.au" |
+
+### CONTAINS Relationship
+
+| Property     | Value                      |
+|--------------|----------------------------|
+| display_url  | "realestate.com.au"        |
+| expanded_url | "http://realestate.com.au" |
+| url          | "https://t.co/U1itzJzgpZ"  |
+
 Originally, to find the top 5 users posting links from realestate.com.au, the cypher will be like this
 ```
 MATCH (u:User)-[p:POSTS]->(t:Tweet)-[c:CONTAINS]->(l:Link) 
 WHERE l.expanded_url CONTAINS "realestate.com.au" 
-RETURN u.username as username, count(distinct t) as number_of_posts  ;
+RETURN u.username as username, count(distinct t) as number_of_posts
+ORDER BY number_of_posts DESC
+LIMIT 5;
 ```
 
 An updated cypher with a direct traversal of relationship between User, Tweet and Domain nodes
 ```
 MATCH (u:User)-[p:POSTS]->(t:Tweet)-[c:CONTAINS]->(d:Domain {name: "realestate.com.au"}) 
-RETURN u.username as username, count(distinct t) as number_of_posts  ;
+RETURN u.username as username, count(distinct t) as number_of_posts 
+ORDER BY number_of_posts DESC
+LIMIT 5;
 ```
 
 ## Problem B
@@ -305,7 +333,7 @@ RETURN u.username as username, count(distinct t) as number_of_posts  ;
 
 ### Create Domain nodes and relationships to Tweet nodes. 
 
-The script use apoc.data.url() to extract domain name from the URLs.
+The script uses apoc.data.url() to extract domain name from the URLs.
 ```
 MATCH (tweet:Tweet)-[:CONTAINS]->(link:Link) 
 WITH *, apoc.data.url(link.expanded_url) as url 
@@ -323,8 +351,10 @@ MATCH (link:Link) DETACH DELETE link;
 
 ## Problem C
 
+*Using elements of your extended data model, answer the following question with a Cypher query. Which user(s) post the most links from linkedin, that is links from the domain "www.linkedin.com" or "lnkd.in"*
 ```
-MATCH (u:User)-[p:POSTS]->(t:Tweet)-[c:CONTAINS]->(d:Domain) WHERE d.text = "www.linkedin.com" OR d.text = "lnkd.in" 
+MATCH (u:User)-[p:POSTS]->(t:Tweet)-[c:CONTAINS]->(d:Domain) 
+WHERE d.name = "www.linkedin.com" OR d.name = "lnkd.in" 
 WITH u.username as username, count(distinct t) as num_posts
 RETURN collect(username) as user_names, num_posts
 ORDER BY num_posts DESC LIMIT 1;
@@ -332,4 +362,32 @@ ORDER BY num_posts DESC LIMIT 1;
 
 ## Problem D
 
+*In part C, we can see that an organisation might have multiple domains associated with it. Can you design a model to also allow for this so the query in Part C could be just focused on the company linkedin itself. We would also like to able to use the graph to analyse these links by industry, extend the model again to allow for this.*
+
+To accommodate multiple domains associated with a company and to facilitate focused queries on a specific company like LikedIn, as well as enable link analysis by industry, the model is purposed with the follwoing model enhancements:
+
+1. Introduce Company nodes: Create a separate node for each unique company (e.g. LinkIn). Each Company node should store company essential properties such as its name and industry.
+
+2. Relationship between Company and Tweet: Establish a relationship named "CONTAINS" between Company nodes and Tweet nodes to indicate that a Tweet contains a link from a specific Company. The relationship should store  domain and expanded URLs properties.
+
+By implementing these modifications, it is more efficient to answer questions related to specific company or industry because it allows direct traversal of relationship between Tweet nodes and Company nodes. Additionally, we retrain important information such as domain names and expanded URLs within the relationship properties, which will facilitate future link analysis based on specific URLs.
+
+
 ![data-model-problem-d](images/part-3-problem-d.png)
+
+### Company Node
+
+| Property | Value          |
+|----------|----------------|
+| name     | "LinkedIn"     |
+| industry | "Social Media" |
+
+
+## CONTAINS Relationship
+
+| Property     | Value                     |
+|--------------|---------------------------|
+| domain       | "lnkd.in"                 |
+| display_url  | "lnkd.in/bNS5EUW"         |
+| expanded_url | "https://lnkd.in/bNS5EUW" |
+| url          | "https://t.co/jB2No9qJWJ" |
