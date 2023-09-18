@@ -31,7 +31,7 @@ CALL apoc.periodic.iterate(
  value.favoritesCount AS favoritesCount,
  value.verb AS verb
  MERGE (t:Tweet{id:id})
- ON CREATE SET\
+ ON CREATE SET
  t.postedTimestamp = postedTimestamp,
  t.text = text,
  t.language = language,
@@ -51,7 +51,7 @@ CALL apoc.periodic.iterate(
 'WITH
  value.id AS id,
  value.twitter_entities.urls AS urls
- WHERE size(urls) > 0 //filter for a tweet with urls
+ WHERE size(urls) > 0
  MATCH(t:Tweet{id:id})
  UNWIND urls AS tw_url
  MERGE (l:Link{expanded_url: tw_url.expanded_url})
@@ -88,7 +88,7 @@ CALL apoc.periodic.iterate(
 'WITH
  value.id AS id,
  value.twitter_entities.hashtags AS hashtags
- WHERE size(hashtags) > 0 // filter for a tweet with hashtags
+ WHERE size(hashtags) > 0
  MATCH(t:Tweet{id:id})
  UNWIND hashtags AS hashtag
  MERGE (h:Hashtag{text: hashtag.text})
@@ -159,7 +159,7 @@ CALL apoc.periodic.iterate(
 'WITH
  value.id AS id,
  value.twitter_entities.user_mentions AS userMentions
- WHERE size(userMentions) > 0 // filter for a tweet with mentioned users
+ WHERE size(userMentions) > 0
  MATCH (t:Tweet{id:id})
  UNWIND userMentions AS userMention
  MERGE (u:User{username: userMention.screen_name})
@@ -185,7 +185,7 @@ CALL apoc.periodic.iterate(
  value.object.text AS text,
  value.object.twitter_lang AS language,
  value.object.favoritesCount AS favoritesCount
- WHERE verb = "share" // filter for retweet
+ WHERE verb = "share"
  MATCH(t1:Tweet{id: id, type: "share"}) 
  MERGE(t2:Tweet{id:originalTweetId}) 
  ON CREATE SET
@@ -210,7 +210,7 @@ CALL apoc.periodic.iterate(
  value.object.twitter_entities.urls AS urls, 
  value.object.id AS originalTweetId,
  value.verb AS verb
- WHERE verb = "share" AND size(urls) > 0 // filter for a retweet with urls in the original tweet
+ WHERE verb = "share" AND size(urls) > 0
  MATCH(t1:Tweet{id: id, type: "share"})
  MATCH(t2:Tweet{id: originalTweetId})
  UNWIND urls AS tw_url
@@ -233,7 +233,7 @@ CALL apoc.periodic.iterate(
  value.object.generator.displayName AS displayName,
  value.object.generator.link as link,
  value.verb AS verb
- WHERE verb = "share" // filter for retweet
+ WHERE verb = "share"
  MATCH (t:Tweet{id: originalTweetId})
  MERGE (s:Source{displayName: displayName, link: link})
  MERGE (t)-[:USING]->(s)
@@ -251,7 +251,7 @@ CALL apoc.periodic.iterate(
  value.object.id AS originalTweetId,
  value.object.twitter_entities.hashtags AS hashtags,
  value.verb AS verb
- WHERE verb = "share" AND size(hashtags) > 0 // filter for a retweet with hashtags in the original tweet
+ WHERE verb = "share" AND size(hashtags) > 0
  MATCH(t:Tweet{id:originalTweetId})
  UNWIND hashtags AS hashtag
  MERGE (h:Hashtag{text: hashtag.text})
@@ -271,7 +271,7 @@ CALL apoc.periodic.iterate(
  value.object.actor.displayName AS displayName,
  value.object.actor.preferredUsername AS username,
  value.verb AS verb
- WHERE verb = "share" // filter for retweet
+ WHERE verb = "share"
  MATCH (t:Tweet{id:originalTweetId})
  MERGE (u:User{username: username})
  ON CREATE SET
@@ -291,7 +291,7 @@ CALL apoc.periodic.iterate(
  value.object.id AS originalTweetId,
  value.object.twitter_entities.user_mentions AS userMentions,
  value.verb AS verb
- WHERE verb = "share" AND size(userMentions) > 0 // filter for a retweet with mentioned users in the original tweet
+ WHERE verb = "share" AND size(userMentions) > 0
  MATCH (t:Tweet{id:originalTweetId})
  UNWIND userMentions AS userMention
  MERGE (u:User{username: userMention.screen_name})
@@ -436,7 +436,7 @@ To accommodate multiple domains associated with a company and to facilitate focu
 
 2. Relationship between Company and Tweet: Establish a relationship named "CONTAINS" between Company nodes and Tweet nodes to indicate that a Tweet contains a link from a specific Company. The relationship should store  domain and expanded URLs properties.
 
-By implementing these modifications, it is more efficient to answer questions related to specific company or industry because it allows direct traversal of relationship between Tweet nodes and Company nodes. Additionally, we retrain important information such as domain names and expanded URLs within the relationship properties, which will facilitate future link analysis based on specific URLs.
+By implementing these modifications, it is more efficient to answer questions related to specific company or industry because it allows direct traversal of relationship between Tweet nodes and Company nodes. Additionally, important information such as domain names and expanded URLs are retained within the relationship properties, which will facilitate future link analysis based on specific URLs.
 
 
 ![data-model-problem-d](images/part-3-problem-d.png)
