@@ -378,6 +378,7 @@ RETURN u.username as username, count(distinct t) as number_of_posts
 ORDER BY number_of_posts DESC
 LIMIT 5;
 ```
+![data-model-problem-d](images/part-3-problem-a2.png)
 
 An updated cypher with a direct traversal of relationship between User, Tweet and Domain nodes
 ```
