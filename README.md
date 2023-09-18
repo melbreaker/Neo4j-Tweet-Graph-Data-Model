@@ -413,21 +413,25 @@ MATCH (link:Link) DETACH DELETE link;
 ## Problem C
 
 *Using elements of your extended data model, answer the following question with a Cypher query. Which user(s) post the most links from linkedin, that is links from the domain "www.linkedin.com" or "lnkd.in"*
+
 ```
 MATCH (u:User)-[p:POSTS]->(t:Tweet)-[c:CONTAINS]->(d:Domain) 
 WHERE d.name = "www.linkedin.com" OR d.name = "lnkd.in" 
-WITH u.username as username, count(distinct t) as num_posts
+WITH u.username as username, count(distinct t) as num_posts 
+ORDER BY toLower(username)
 RETURN collect(username) as user_names, num_posts
-ORDER BY num_posts DESC LIMIT 1;
+ORDER BY num_posts DESC
+LIMIT 1;
 ```
+![part-3-problem-c](images/part-3-problem-c.png)
 
 ## Problem D
 
 *In part C, we can see that an organisation might have multiple domains associated with it. Can you design a model to also allow for this so the query in Part C could be just focused on the company linkedin itself. We would also like to able to use the graph to analyse these links by industry, extend the model again to allow for this.*
 
-To accommodate multiple domains associated with a company and to facilitate focused queries on a specific company like LikedIn, as well as enable link analysis by industry, the model is purposed with the follwoing model enhancements:
+To accommodate multiple domains associated with a company and to facilitate focused queries on a specific company like LikedIn, as well as enable link analysis by industry, the model is purposed with the following model enhancements:
 
-1. Introduce Company nodes: Create a separate node for each unique company (e.g. LinkIn). Each Company node should store company essential properties such as its name and industry.
+1. Introduce Company nodes: Create a separate node for each unique company (e.g. LinkIn). Each Company node should store company essential properties such as name and industry.
 
 2. Relationship between Company and Tweet: Establish a relationship named "CONTAINS" between Company nodes and Tweet nodes to indicate that a Tweet contains a link from a specific Company. The relationship should store  domain and expanded URLs properties.
 
