@@ -4,6 +4,13 @@ Student ID: 47369833
 
 Macquarie University
 
+# PART 0. Data Curation
+
+Run a python script to apply data cleaning/curation on the 10k Tweet Dataset
+```
+python clean_json.py
+```
+
 # PART 1. Initial Graph Data Model
 
 ## Data Structure
