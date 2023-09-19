@@ -217,15 +217,14 @@ CALL apoc.periodic.iterate(
  value.object.twitter_entities.urls AS urls, 
  value.object.id AS originalTweetId,
  value.verb AS verb
- WHERE verb = "share" AND size(urls) > 0
- MATCH(t1:Tweet{id: id, type: "share"})
- MATCH(t2:Tweet{id: originalTweetId})
+ WHERE verb = "share" AND size(urls) > 0 // filter for retweet with urls in the original tweet
+ MATCH(t:Tweet{id: originalTweetId})
  UNWIND urls AS tw_url
- MERGE (l:Link{url: tw_url.url})
+ MERGE (l:Link{expanded_url: tw_url.expanded_url})
  ON CREATE SET
- l.expanded_url = tw_url.expanded_url,
+ l.url = tw_url.url,
  l.display_url = tw_url.display_url
- MERGE (t2)-[:CONTAINS]->(l)',
+ MERGE (t)-[:CONTAINS]->(l)',
 {batchSize:500})
 YIELD * ;
 ```
