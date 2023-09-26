@@ -341,9 +341,14 @@ ORDER BY num_pop_posts DESC LIMIT 3;
 
 ```
 MATCH p=shortestPath((u:User{username: "luckyinsivan"})-[r:CONTAINS|MENTIONS|POSTS|RETWEETS|TAGS*]-(h:Hashtag{text: "imsosick"})) 
-RETURN length(p) as path_length;
+RETURN p;
 ```
 ![part-2-problem-3](images/part-2-problem-3-graph.png)
+
+```
+MATCH p=shortestPath((u:User{username: "luckyinsivan"})-[r:CONTAINS|MENTIONS|POSTS|RETWEETS|TAGS*]-(h:Hashtag{text: "imsosick"})) 
+RETURN length(p) as path_length;
+```
 
 ![part-2-problem-3](images/part-2-problem-3.png)
 
